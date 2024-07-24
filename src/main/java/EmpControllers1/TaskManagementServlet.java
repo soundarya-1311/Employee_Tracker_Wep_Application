@@ -1,0 +1,123 @@
+package EmpControllers1;
+
+import java.io.IOException;
+import java.sql.Date;
+import java.util.List;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import EmpModels1.TaskDAO;
+import EmpView1.Task;
+
+@WebServlet("/TaskManagementServlet")
+public class TaskManagementServlet extends HttpServlet {
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Display tasks
+        List<Task> tasks = TaskDAO.getAllTasks();
+        request.setAttribute("tasks", tasks);
+        request.getRequestDispatcher("TaskManagement.jsp").forward(request, response);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String action = request.getParameter("action");
+
+        if (action != null) {
+            switch (action) {
+                case "add":
+                    addTask(request, response);
+                    break;
+                case "edit":
+                    int taskId = Integer.parseInt(request.getParameter("taskId"));
+                    Task task = TaskDAO.getTaskById(taskId);
+                    request.setAttribute("task", task);
+                    List<Task> tasks = TaskDAO.getAllTasks();
+                    request.setAttribute("tasks", tasks);
+                    request.getRequestDispatcher("TaskManagement.jsp").forward(request, response);
+                    break;
+                case "update":
+                    updateTask(request, response);
+                    break;
+                case "delete":
+                    deleteTask(request, response);
+                    break;
+                default:
+                    response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+                    break;
+            }
+        } else {
+            response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+        }
+    }
+
+    private void addTask(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            String taskName = request.getParameter("taskName");
+            String taskDescription = request.getParameter("taskDescription");
+            int assignedTo = Integer.parseInt(request.getParameter("assignedTo"));
+            Date startDate = Date.valueOf(request.getParameter("startDate"));
+            Date endDate = Date.valueOf(request.getParameter("endDate"));
+            String status = request.getParameter("status");
+            float workHours = Float.parseFloat(request.getParameter("workHours"));
+            Date workDate = Date.valueOf(request.getParameter("workDate"));
+
+            if (workHours > 8) {
+                request.setAttribute("errorMessage", "Work hours cannot exceed 8 hours per day.");
+                request.getRequestDispatcher("TaskManagement.jsp").forward(request, response);
+                return;
+            }
+
+            Task newTask = new Task(taskName, taskDescription, assignedTo, startDate, endDate, status, workHours, workDate);
+            TaskDAO.addTask(newTask);
+
+            response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+        } catch (IllegalArgumentException | NullPointerException e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+        }
+    }
+
+    private void updateTask(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            int taskId = Integer.parseInt(request.getParameter("taskId"));
+            String taskName = request.getParameter("taskName");
+            String taskDescription = request.getParameter("taskDescription");
+            int assignedTo = Integer.parseInt(request.getParameter("assignedTo"));
+            Date startDate = Date.valueOf(request.getParameter("startDate"));
+            Date endDate = Date.valueOf(request.getParameter("endDate"));
+            String status = request.getParameter("status");
+            float workHours = Float.parseFloat(request.getParameter("workHours"));
+            Date workDate = Date.valueOf(request.getParameter("workDate"));
+
+            if (workHours > 8) {
+                request.setAttribute("errorMessage", "Work hours cannot exceed 8 hours per day.");
+                request.getRequestDispatcher("error.jsp").forward(request, response);
+                return;
+            }
+
+            Task updatedTask = new Task(taskId, taskName, taskDescription, assignedTo, startDate, endDate, status, workHours, workDate);
+            TaskDAO.updateTask(updatedTask);
+
+            response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+        } catch (IllegalArgumentException | NullPointerException e) {
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+        }
+    }
+
+    private void deleteTask(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            int taskId = Integer.parseInt(request.getParameter("taskId"));
+            TaskDAO.deleteTask(taskId);
+            response.sendRedirect(request.getContextPath() + "/TaskManagementServlet");
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+            request.setAttribute("errorMessage", "Invalid number format for taskId.");
+            request.getRequestDispatcher("error.jsp").forward(request, response);
+        }
+    }
+}
